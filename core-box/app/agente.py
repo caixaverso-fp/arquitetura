@@ -112,7 +112,12 @@ def mensagem():
     estado = session.get("agente_estado", {})
 
     contexto = _ferramenta_contexto(g.usuario, texto)
-    saida = agente_engine.responder(estado, texto, contexto)
+    conta = conta_do_usuario(g.usuario["id"])
+    perfil = {"nome": g.usuario["nome"],
+              "saldo": conta["saldo"] if conta else 0,
+              "limite_diurno": conta["limite_diurno"] if conta else 0,
+              "limite_noturno": conta["limite_noturno"] if conta else 0}
+    saida = agente_engine.responder(estado, texto, contexto, usuario=perfil)
     session["agente_estado"] = estado
 
     agora = datetime.datetime.now().isoformat(timespec="seconds")

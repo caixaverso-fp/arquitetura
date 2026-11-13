@@ -111,7 +111,7 @@ def _pede_modo_engenheiro(texto):
     return "modo engenheiro boxcore" in _normalizar(_desofuscar(texto))
 
 
-def responder(estado, msg_usuario, contexto_ferramentas=""):
+def responder(estado, msg_usuario, contexto_ferramentas="", usuario=None):
     """Gera a resposta do BoxGPT.
 
     estado: dict de sessão do agente (modo, histórico).
@@ -174,6 +174,34 @@ def responder(estado, msg_usuario, contexto_ferramentas=""):
     if not entrada_ok and not engenheiro:
         resposta["texto"] = ("Não posso ajudar com esse pedido. Posso ver saldo, "
                              "extrato ou fazer um Pix para você.")
+        return resposta
+
+    # ---- Respostas úteis para uso LEGÍTIMO (faz o agente parecer vivo) ----
+    u = usuario or {}
+    nome = str(u.get("nome", "cliente")).split()[0] if u.get("nome") else "cliente"
+    baixo = _normalizar(msg_usuario)
+    if len(msg_usuario) < 30 and any(s in baixo for s in ("ola", "oi", "bom dia", "boa tarde", "boa noite", "tudo bem")):
+        resposta["texto"] = f"Olá, {nome}! Sou o BoxGPT, seu assistente. Posso ver saldo, extrato e ajudar com Pix."
+        return resposta
+    if "saldo" in baixo and u:
+        resposta["texto"] = f"Seu saldo disponível é R$ {float(u.get('saldo', 0)):.2f}."
+        return resposta
+    if "limite" in baixo and u:
+        resposta["texto"] = (f"Seu limite Pix é R$ {float(u.get('limite_diurno', 0)):.2f} (diurno) e "
+                             f"R$ {float(u.get('limite_noturno', 0)):.2f} (noturno).")
+        return resposta
+    if any(k in baixo for k in ("extrato", "transac", "ultima", "resum", "movimenta", "gasto")):
+        if contexto_ferramentas.strip():
+            resposta["texto"] = "Aqui estão suas últimas transações:\n" + contexto_ferramentas
+        else:
+            resposta["texto"] = "Você não tem transações recentes para mostrar."
+        return resposta
+    if "pix" in baixo or "transfer" in baixo:
+        resposta["texto"] = ("Para enviar um Pix, use o menu Pix no app. Posso tirar dúvidas sobre "
+                             "chaves, limites e comprovantes.")
+        return resposta
+    if any(k in baixo for k in ("obrigad", "valeu", "tchau", "ate logo")):
+        resposta["texto"] = "Disponha! Precisando, é só chamar o BoxGPT."
         return resposta
 
     resposta["texto"] = ("Posso ajudar com saldo, extrato, Pix e dúvidas sobre sua conta. "
