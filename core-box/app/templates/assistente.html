@@ -9,8 +9,8 @@
     {% endfor %}
   </div>
   <div style="display:flex;gap:8px;margin-top:10px">
-    <input id="msg" placeholder="Digite sua mensagem..." style="flex:1" onkeydown="if(event.key==='Enter')enviar()">
-    <button class="btn inline" onclick="enviar()">Enviar</button>
+    <input id="msg" placeholder="Digite sua mensagem..." style="flex:1">
+    <button id="enviar" class="btn inline">Enviar</button>
   </div>
   <div class="muted" style="margin-top:6px">BoxGPT pode cometer erros. Não compartilhe senhas.</div>
 </div>
@@ -19,14 +19,6 @@
 .bolha.cli{background:#0B2A4A;color:#fff;margin-left:auto}
 .bolha.bot{background:#eef2f7;color:#1a202c}
 </style>
-<script>
-const chat=document.getElementById('chat');
-function bolha(txt,cls){const d=document.createElement('div');d.className='bolha '+cls;
-  // AI-10: saída do agente inserida como HTML (tratamento inseguro de saída → XSS)
-  d.innerHTML=txt;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;}
-async function enviar(){const i=document.getElementById('msg');const t=i.value.trim();if(!t)return;
-  bolha(t,'cli');i.value='';
-  const r=await fetch('/assistente/api/mensagem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({texto:t})});
-  const j=await r.json();bolha(j.resposta,'bot');}
+<script src="/static/boxgpt.js"> 
 </script>
 {% endblock %}
