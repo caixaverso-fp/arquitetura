@@ -11,4 +11,4 @@ except Exception as _e:  # não derruba o app se o diretório de log não existi
 
 if __name__ == "__main__":
     # Apenas desenvolvimento local; produção usa gunicorn (ver Dockerfile)
-    app.run(host="127.0.0.1", port=8000)
+    app.run(host="0.0.0.0", port=8000)
