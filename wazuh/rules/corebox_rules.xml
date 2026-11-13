@@ -1,0 +1,121 @@
+<!-- Regras de detecção do Core Box (Dia 04) — /var/ossec/etc/rules/ no Wazuh manager.
+     IDs na faixa local (100100+). Severidade (level) calibrada para o War Room. -->
+<group name="corebox,">
+
+  <!-- ===== Base: acesso HTTP ===== -->
+  <rule id="100100" level="0">
+    <decoded_as>corebox-access</decoded_as>
+    <description>Core Box: requisição HTTP.</description>
+  </rule>
+
+  <rule id="100101" level="4">
+    <if_sid>100100</if_sid>
+    <field name="status" type="pcre2">^4\d\d$</field>
+    <description>Core Box: resposta 4xx em $(url) de $(srcip).</description>
+    <group>attack,</group>
+  </rule>
+
+  <rule id="100102" level="10">
+    <if_sid>100100</if_sid>
+    <field name="status" type="pcre2">^5\d\d$</field>
+    <description>Core Box: ERRO 5xx em $(url) — possível falha/indisponibilidade.</description>
+    <mitre><id>T1499</id></mitre>
+    <group>availability,</group>
+  </rule>
+
+  <!-- Falha de login (401 no endpoint de autenticação) -->
+  <rule id="100130" level="5">
+    <if_sid>100100</if_sid>
+    <field name="url" type="pcre2">/(api/v1/auth/)?login</field>
+    <field name="status">401</field>
+    <description>Core Box: falha de autenticação de $(srcip).</description>
+    <mitre><id>T1110</id></mitre>
+    <group>authentication_failures,</group>
+  </rule>
+
+  <!-- Credential stuffing / brute force: muitas falhas do mesmo IP -->
+  <rule id="100131" level="12" frequency="8" timeframe="60">
+    <if_matched_sid>100130</if_matched_sid>
+    <same_srcip />
+    <description>Core Box: possível credential stuffing/brute force — $(srcip) acumulou falhas de login.</description>
+    <mitre><id>T1110.004</id></mitre>
+    <group>authentication_failures,attack,</group>
+  </rule>
+
+  <!-- Enxurrada de requisições do mesmo IP: indício de DoS/scan -->
+  <rule id="100140" level="12" frequency="120" timeframe="30">
+    <if_matched_sid>100100</if_matched_sid>
+    <same_srcip />
+    <description>Core Box: volume anômalo de requisições de $(srcip) — possível DoS ou varredura.</description>
+    <mitre><id>T1498</id></mitre>
+    <group>availability,attack,</group>
+  </rule>
+
+  <!-- ===== Base: evento de segurança da aplicação ===== -->
+  <rule id="100110" level="7">
+    <decoded_as>corebox-security</decoded_as>
+    <description>Core Box: evento de segurança $(evento).</description>
+    <group>attack,</group>
+  </rule>
+
+  <rule id="100111" level="12">
+    <if_sid>100110</if_sid>
+    <field name="evento">BOLA_ATTEMPT</field>
+    <description>Core Box: tentativa de acesso a conta de terceiro (BOLA/IDOR) — ator $(box_user).</description>
+    <mitre><id>T1190</id></mitre>
+  </rule>
+
+  <rule id="100112" level="10">
+    <if_sid>100110</if_sid>
+    <field name="evento">LOGIN_BLOQUEADO</field>
+    <description>Core Box: conta/CPF bloqueado por excesso de tentativas.</description>
+    <mitre><id>T1110</id></mitre>
+  </rule>
+
+  <rule id="100113" level="13">
+    <if_sid>100110</if_sid>
+    <field name="evento">AJUSTE_ACIMA_ALCADA</field>
+    <description>Core Box: ajuste de saldo acima da alçada no backoffice — ator $(box_user).</description>
+    <mitre><id>T1565</id></mitre>
+    <group>fraud,</group>
+  </rule>
+
+  <rule id="100114" level="11">
+    <if_sid>100110</if_sid>
+    <field name="evento">EXPORTACAO_CLIENTES</field>
+    <description>Core Box: exportação em massa de clientes — possível exfiltração.</description>
+    <mitre><id>T1567</id></mitre>
+    <group>exfiltration,</group>
+  </rule>
+
+  <rule id="100115" level="8">
+    <if_sid>100110</if_sid>
+    <field name="evento">ANTIFRAUDE_INDISPONIVEL</field>
+    <description>Core Box: antifraude indisponível — transações em modo degradado.</description>
+  </rule>
+
+  <!-- ===== Base: auditoria ===== -->
+  <rule id="100120" level="3">
+    <decoded_as>corebox-audit</decoded_as>
+    <description>Core Box: auditoria $(acao).</description>
+  </rule>
+
+  <!-- SSO com token sem assinatura (alg: none) -->
+  <rule id="100150" level="13">
+    <if_sid>100120</if_sid>
+    <field name="acao">SSO_LOGIN</field>
+    <regex type="pcre2">"alg":\s*"none"</regex>
+    <description>Core Box: login SSO aceito com token SEM assinatura (alg:none) — comprometimento de autenticação.</description>
+    <mitre><id>T1212</id></mitre>
+    <group>authentication,attack,</group>
+  </rule>
+
+  <!-- Pix de valor alto (sinal para correlação de fraude no War Room) -->
+  <rule id="100151" level="6">
+    <if_sid>100120</if_sid>
+    <field name="acao">PIX_ENVIADO</field>
+    <description>Core Box: Pix enviado (correlacionar com fraude se em rajada).</description>
+    <group>fraud,</group>
+  </rule>
+
+</group>

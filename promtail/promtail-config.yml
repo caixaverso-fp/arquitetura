@@ -1,0 +1,53 @@
+server:
+  http_listen_port: 9080
+positions:
+  filename: /tmp/positions.yaml
+clients:
+  # Em sala, troque "loki" pelo IP da VM central: http://<IP_SOC>:3100/loki/api/v1/push
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # ----- Log de acesso HTTP do Core Box -----
+  - job_name: corebox-access
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: corebox
+          tipo: access
+          # grupo: grupo01   # <- cada grupo coloca aqui o seu identificador
+          __path__: /var/log/box/access.log
+    pipeline_stages:
+      - regex:
+          expression: 'ip=(?P<srcip>\S+) metodo=(?P<metodo>\S+) path="(?P<path>[^"]*)" status=(?P<status>\d+) dur_ms=(?P<dur_ms>\d+) user=(?P<usuario>\S+)'
+      - labels:
+          status:
+          metodo:
+      - template:
+          source: status_classe
+          template: '{{ if ge (atoi .status) 500 }}5xx{{ else if ge (atoi .status) 400 }}4xx{{ else }}ok{{ end }}'
+      - labels:
+          status_classe:
+
+  # ----- Log de aplicação / segurança do Core Box -----
+  - job_name: corebox-app
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: corebox
+          tipo: app
+          __path__: /var/log/box/app.log
+    pipeline_stages:
+      - match:
+          selector: '{tipo="app"}'
+          stages:
+            - regex:
+                expression: 'nivel=(?P<nivel>\S+) (?P<corpo>.*)'
+            - labels:
+                nivel:
+      - match:
+          selector: '{tipo="app"} |~ "SECURITY_EVENT"'
+          stages:
+            - regex:
+                expression: 'SECURITY_EVENT tipo=(?P<evento>\S+)'
+            - labels:
+                evento:

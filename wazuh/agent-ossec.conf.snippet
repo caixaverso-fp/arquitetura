@@ -1,0 +1,13 @@
+<!-- Adicionar ao /var/ossec/etc/ossec.conf do wazuh-agent em CADA VPS de grupo.
+     Faz o agente ler os logs do Core Box e enviá-los ao manager central. -->
+<localfile>
+  <log_format>syslog</log_format>
+  <location>/var/log/box/access.log</location>
+</localfile>
+<localfile>
+  <log_format>syslog</log_format>
+  <location>/var/log/box/app.log</location>
+</localfile>
+
+<!-- Identifique o grupo no nome do agente ao registrar:
+     /var/ossec/bin/agent-auth -m <IP_DO_MANAGER> -A corebox-grupo01   -->

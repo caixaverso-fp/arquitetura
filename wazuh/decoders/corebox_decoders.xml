@@ -1,0 +1,32 @@
+<!-- Decoders do Core Box (Dia 04) — colocar em /var/ossec/etc/decoders/ no Wazuh manager.
+     Casam com os logs de app/observabilidade.py (/var/log/box/access.log e app.log). -->
+
+<!-- ===================== ACESSO HTTP (access.log) ===================== -->
+<decoder name="corebox-access">
+  <prematch>host=corebox ip=</prematch>
+</decoder>
+<decoder name="corebox-access-fields">
+  <parent>corebox-access</parent>
+  <regex type="pcre2" offset="after_prematch">^(\S+) metodo=(\w+) path="([^"]*)" status=(\d+) dur_ms=(\d+) user=(\S+)</regex>
+  <order>srcip, method, url, status, dur_ms, box_user</order>
+</decoder>
+
+<!-- ============== EVENTO DE SEGURANÇA (app.log: SECURITY_EVENT) ============== -->
+<decoder name="corebox-security">
+  <prematch>SECURITY_EVENT tipo=</prematch>
+</decoder>
+<decoder name="corebox-security-fields">
+  <parent>corebox-security</parent>
+  <regex type="pcre2" offset="after_prematch">^(\S+) ator=(\S+)</regex>
+  <order>evento, box_user</order>
+</decoder>
+
+<!-- ============== AUDITORIA (app.log: AUDITORIA acao=) ============== -->
+<decoder name="corebox-audit">
+  <prematch>AUDITORIA acao=</prematch>
+</decoder>
+<decoder name="corebox-audit-fields">
+  <parent>corebox-audit</parent>
+  <regex type="pcre2" offset="after_prematch">^(\S+) ator=(\S+)</regex>
+  <order>acao, box_user</order>
+</decoder>

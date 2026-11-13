@@ -1,0 +1,10 @@
+apiVersion: 1
+providers:
+  - name: 'Core Box War Room'
+    orgId: 1
+    folder: 'Core Box'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards
